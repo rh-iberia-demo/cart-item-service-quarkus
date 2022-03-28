@@ -12,7 +12,7 @@
 		<lombok.version>1.18.22</lombok.version>
 		<micrometer.version>1.8.1</micrometer.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<quarkus.version>2.6.1.Final</quarkus.version>
+		<quarkus.version>2.7.3.Final</quarkus.version>
 	</properties>
 
 	<dependencyManagement>
@@ -60,6 +60,15 @@
 		<dependency>
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<!-- OpenTelemetry -->
+		<dependency>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-opentelemetry-exporter-otlp</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.opentelemetry.instrumentation</groupId>
+			<artifactId>opentelemetry-jdbc</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>io.quarkus</groupId>
@@ -120,6 +129,54 @@
 			<properties>
 				<quarkus.package.type>native</quarkus.package.type>
 			</properties>
+		</profile>
+		<profile>
+			<id>Prod</id>
+			<properties>
+				<jkube.generator.name>quay.io/rgordill/cart-item-service-quarkus:0.2-SNAPSHOT</jkube.generator.name>
+				<!-- disable jolokia and prometheus exporter -->
+				<jkube.generator.java-exec.jolokiaPort>0</jkube.generator.java-exec.jolokiaPort>
+				<jkube.generator.java-exec.prometheusPort>8080</jkube.generator.java-exec.prometheusPort>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.eclipse.jkube</groupId>
+						<artifactId>kubernetes-maven-plugin</artifactId>
+						<version>1.7.0</version>
+						<configuration>
+							<resources>
+								<replicas>1</replicas>
+								<volumes>
+									<volume>
+										<name>config-volume</name>
+										<type>configMap</type>
+										<configMapName>${project.artifactId}-config</configMapName>
+										<mounts>
+											<mount>/opt/jboss/etc</mount>
+										</mounts>
+									</volume>
+								</volumes>
+								<configMap>
+									<name>${project.artifactId}-config</name>
+									<entries>
+										<entry>
+											<file>src/main/resources/application.properties</file>
+										</entry>
+									</entries>
+								</configMap>
+								<env>
+									<!-- disable jolokia-->
+									<!--AB_JOLOKIA_OFF>true</AB_JOLOKIA_OFF>
+									<AB_PROMETHEUS_OFF>true</AB_PROMETHEUS_OFF-->
+									<JAVA_OPTIONS>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
+									<!--JAVA_ARGS></JAVA_ARGS-->
+								</env>
+							</resources>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
 		</profile>
 	</profiles>
 </project>
